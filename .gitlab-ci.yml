@@ -1,0 +1,35 @@
+image: harbor.osde.ar/os-utilitarios/deploy-base:1.0.3
+
+stages:
+  - test
+
+variables:
+  MAVEN_SETTINGS: "${CI_PROJECT_DIR}/.m2/settings.xml"
+  MAVEN_OPTS: "-Dmaven.repo.local=${CI_PROJECT_DIR}/.m2/repository -Dmaven.wagon.http.ssl.insecure=true"
+
+
+run-test:
+  stage: test
+  script:
+    - cp -R $M2_DIR_SRC $CI_PROJECT_DIR
+    - mkdir -p src/main/java src/main/resources
+    - mvn -f utils/pom.xml clean
+    - mvn -f utils/pom.xml compile -s $MAVEN_SETTINGS
+    - mvn -f utils/pom.xml package
+    - cd utils
+    - mvn deploy -f pom.xml -s $MAVEN_SETTINGS
+  artifacts:
+    when: always
+    expire_in: 1 day
+    paths:
+      - ./utils/target/generics.utils-$UTILS_VERSION-tests.jar
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "web" || $CI_PIPELINE_SOURCE == "schedule"'
+      when: always
+      allow_failure: true
+    - when: never
+  tags:
+    - docker
+    - linux
+    - certificacion
+ 
